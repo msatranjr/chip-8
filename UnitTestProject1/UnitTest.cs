@@ -8,6 +8,20 @@ namespace UnitTestProject1
     public class UnitTest1
     {
         [TestMethod]
+        public void TestInstructions()
+        {
+            // Test LD Vx, byte and ADD Vx, byte
+            CPU cpu = new CPU();
+            cpu.LDV(0, 0x0F);
+            Assert.AreEqual(0x0F, cpu.V[0]);
+
+            cpu.ADDV(0, 0x01);
+
+            Assert.AreEqual(0x10, cpu.V[0]);
+            Assert.AreEqual(0x00, cpu.VF);
+        }
+
+        [TestMethod]
         public void TestSprites()
         {
             CPU cpu = new CPU();
@@ -23,7 +37,7 @@ namespace UnitTestProject1
 "01100000\n" +
 "00100000\n" +
 "00100000\n" +
-"01110000\n" 
+"01110000\n"
 ,
 "11110000\n" +
 "00010000\n" +
@@ -114,16 +128,16 @@ namespace UnitTestProject1
             for (int i = 0; i < 16; i++)
             {
                 string actual = "";
-                foreach (byte b in cpu._sprites[i])
+                for (int j = 0; j < 5; j++)
                 {
-                    for (int j = 0; j < 8; j++)
-                        actual += (0x80 & (b << j)) >> 7;
+                    for (int k = 0; k < 8; k++)
+                        actual += (0x80 & (cpu._sprites[i,j] << k)) >> 7;
                     actual += "\n";
                 }
 
                 Assert.AreEqual(expected[i], actual);
             }
-            
+
         }
     }
 }

@@ -9,10 +9,10 @@ namespace Chip_8.Chip_8_Emulator
     public class CPU
     {
         // CPU registers.
-        byte[] V = new byte[16];
+        public byte[] V = new byte[16];
 
         // Special flag register.
-        byte[] VF;
+        public byte VF;
 
         // Delay timer.
         byte DT;
@@ -33,7 +33,7 @@ namespace Chip_8.Chip_8_Emulator
         byte[] _mem = new byte[4096];
 
         // Graphics memory.
-        byte[,] _g_mem = new byte[64,32];
+        byte[,] _g_mem = new byte[64, 32];
 
         public byte[,] _sprites = new byte[,]
         {
@@ -105,7 +105,7 @@ namespace Chip_8.Chip_8_Emulator
         }
 
         // 0x3xkk -- Skip the next instruction if Vx == kk
-        public void SE(int x, int kk)
+        public void SE(byte x, byte kk)
         {
             if (V[x] == kk)
             {
@@ -114,7 +114,7 @@ namespace Chip_8.Chip_8_Emulator
         }
 
         // 0x4xkk -- Skip the next instruction if Vx != kk
-        public void SNE(int x, int kk)
+        public void SNE(byte x, byte kk)
         {
             if (V[x] != kk)
             {
@@ -123,12 +123,95 @@ namespace Chip_8.Chip_8_Emulator
         }
 
         // 0x5xy0 -- Skip the next instruction if Vx == Vy
-        public void SEV(int x, int y)
+        public void SEV(byte x, byte y)
         {
             if (V[x] == V[y])
             {
                 PC++;
             }
+        }
+
+        // 0x6xkk -- Puts the value kk into register Vx
+        public void LDV(byte x, byte kk)
+        {
+            V[x] = kk;
+        }
+
+        // 0x7xkk -- Adds the value kk to the value of register Vx, then stores the result in Vx
+        public void ADDV(byte x, byte kk)
+        {
+            V[x] += kk;
+        }
+
+        // 0x8xy0 -- Store the value of register Vy in register Vx
+        public void LDR(byte x, byte y)
+        {
+            V[x] = V[y];
+        }
+
+        // 0x8xy1 -- Set Vx = Vx OR Vy
+        public void OR(int x, int y)
+        {
+            V[x] |= V[y];
+        }
+
+        // 0x8xy2 -- Set Vx = AND Vy
+        public void AND(int x, int y)
+        {
+            V[x] &= V[y];
+        }
+
+        // 0x8xy3 -- Set Vx = Vx XOR Vy
+        public void XOR (int x, int y)
+        {
+            V[x] ^= V[y];
+        }
+
+        // 0x8xy4 -- Set Vx = Vx + Vy, set VF = carry.
+        public void ADDRC (int x, int y)
+        {
+            int value = V[x] + V[y];
+
+            V[x] = (byte)(value & 0xFF);
+
+            if (value > 0xFF)
+            {
+                VF = 0x01;
+            }
+            else
+            {
+                VF = 0x00;
+            }
+        }
+
+        // 0x8xy5 -- Set Vx = Vx - Vy, set VF to NOT borrow.
+        public void SUBR (int x, int y)
+        {
+            if (V[x] > V[y])
+            {
+                VF = 1;
+            }
+            else
+            {
+                VF = 0;
+            }
+
+            V[x] -= V[y];
+        }
+
+        // 0x8xy6 -- sets Vx = Vx >> 1
+        public void SHR (int x)
+        {
+            if ((V[x] & 0x01) > 0)
+            {
+                VF = 1;
+            }
+            else
+            {
+                VF = 0;
+            }
+
+            V[x] >>= 1;
         }
 
         private void Fetch()
@@ -155,7 +238,7 @@ namespace Chip_8.Chip_8_Emulator
 
             // Set PC to first instruction
 
-            while(true)
+            while (true)
             {
                 Fetch();
                 Decode();
