@@ -127,7 +127,7 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Chip-8\Chip-8.csproj">
+    <ProjectReference Include="..\Chip-8.csproj">
       <Project>{737c7a3b-14ee-4f8f-a01d-461cacdd5166}</Project>
       <Name>Chip-8</Name>
     </ProjectReference>

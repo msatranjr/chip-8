@@ -32,46 +32,138 @@ namespace Chip_8.Chip_8_Emulator
         // Physical memory.
         byte[] _mem = new byte[4096];
 
-        byte[][] _g_mem;
+        // Graphics memory.
+        byte[,] _g_mem = new byte[64,32];
 
-        public byte[][] _sprites = new byte[][]
+        public byte[,] _sprites = new byte[,]
         {
             // 0 sprite
-            new byte[]{ 0xF0, 0x90, 0x90, 0x90, 0xF0 },
+            { 0xF0, 0x90, 0x90, 0x90, 0xF0 },
             // 1 Sprite
-            new byte[] { 0x20, 0x60, 0x20, 0x20, 0x70 },
+            { 0x20, 0x60, 0x20, 0x20, 0x70 },
             // 2 sprite
-            new byte[]{ 0xF0, 0x10, 0xF0, 0x80, 0xF0 },
+            { 0xF0, 0x10, 0xF0, 0x80, 0xF0 },
             // 3 sprite
-            new byte[] { 0xF0, 0x10, 0xF0, 0x10, 0xF0 },
+            { 0xF0, 0x10, 0xF0, 0x10, 0xF0 },
             // 4 sprite
-            new byte[] { 0x90, 0x90, 0xF0, 0x10, 0x10 },
+            { 0x90, 0x90, 0xF0, 0x10, 0x10 },
             // 5 sprite
-            new byte[] { 0xF0, 0x80, 0xF0, 0x10, 0xF0 },
+            { 0xF0, 0x80, 0xF0, 0x10, 0xF0 },
             // 6 sprite
-            new byte[] { 0xF0, 0x80, 0xF0, 0x90, 0xF0},
+            { 0xF0, 0x80, 0xF0, 0x90, 0xF0},
             // 7 sprite
-            new byte[] {0xF0, 0x10, 0x20, 0x40, 0x40 },
+            {0xF0, 0x10, 0x20, 0x40, 0x40 },
             // 8 sprite
-            new byte[] { 0xF0, 0x90, 0xF0, 0x90, 0xF0},
+            { 0xF0, 0x90, 0xF0, 0x90, 0xF0},
             // 9 sprite
-            new byte[] {0xF0, 0x90, 0xF0, 0x10, 0xF0},
+            {0xF0, 0x90, 0xF0, 0x10, 0xF0},
             // A sprite
-            new byte[] { 0xF0, 0x90, 0xF0, 0x90, 0x90},
+            { 0xF0, 0x90, 0xF0, 0x90, 0x90},
             // B sprite
-            new byte[] {0xE0, 0x90, 0xE0, 0x90, 0xE0},
+            {0xE0, 0x90, 0xE0, 0x90, 0xE0},
             // C sprite
-            new byte[] { 0xF0, 0x80, 0x80, 0x80, 0xF0},
+            { 0xF0, 0x80, 0x80, 0x80, 0xF0},
             // D sprite
-            new byte[] { 0xE0, 0x90, 0x90, 0x90, 0xE0},
+            { 0xE0, 0x90, 0x90, 0x90, 0xE0},
             // E sprite
-            new byte[] { 0xF0, 0x80, 0xF0, 0x80, 0xF0},
+            { 0xF0, 0x80, 0xF0, 0x80, 0xF0},
             // F sprite
-            new byte[] {0xF0, 0x80, 0xF0, 0x80, 0x80}
+            {0xF0, 0x80, 0xF0, 0x80, 0x80}
         };
+
+        // 0x00E0 -- Clear the screen.
+        private void CLS()
+        {
+            for (int y = 0; y < _g_mem.GetLength(0); y++)
+            {
+                for (int x = 0; x < _g_mem.GetLength(1); y++)
+                {
+                    _g_mem[y, x] &= 0;
+                }
+            }
+        }
+
+        // 0x00EE -- Return from a subroutine.
+        private void RET()
+        {
+            PC = stack[SP];
+            SP--;
+        }
+
+        // 0x1nnn -- Jump to location nnn.
+        private void JP(int nnn)
+        {
+            PC = nnn;
+        }
+
+        // 0x2nnn -- Call subroutine at nnn.
+        private void CALL(int nnn)
+        {
+            SP++;
+            stack[SP] = PC;
+            PC = nnn;
+        }
+
+        // 0x3xkk -- Skip the next instruction if Vx == kk
+        public void SE(int x, int kk)
+        {
+            if (V[x] == kk)
+            {
+                PC++;
+            }
+        }
+
+        // 0x4xkk -- Skip the next instruction if Vx != kk
+        public void SNE(int x, int kk)
+        {
+            if (V[x] != kk)
+            {
+                PC++;
+            }
+        }
+
+        // 0x5xy0 -- Skip the next instruction if Vx == Vy
+        public void SEV(int x, int y)
+        {
+            if (V[x] == V[y])
+            {
+                PC++;
+            }
+        }
+
+        private void Fetch()
+        {
+            // Fetch memory from PC and store in IR
+            // Increment PC by 1.
+        }
+
+        private void Decode()
+        {
+            // Decode the binary of IR
+        }
+
+        private void Execute()
+        {
+            // Run the instruction that was decoded.
+        }
 
         public void Start()
         {
+            // Initialize everything.
+
+            // Load ROM into memory
+
+            // Set PC to first instruction
+
+            while(true)
+            {
+                Fetch();
+                Decode();
+                Execute();
+
+                // Delay CPU to emulate true speed.
+                Task.Delay(500);
+            }
         }
     }
 }
