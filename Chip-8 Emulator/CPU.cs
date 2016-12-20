@@ -328,7 +328,7 @@ namespace Chip_8.Chip_8_Emulator
 
                         for (int j = 0; j < 8; j++)
                         {
-                            int mask = 0x80 >> (7 - j);
+                            int mask = 0x80 >> j;
                             int xBitPos = (X + j) % 64;
 
                             int g_bit = _g_mem[yBitPos, xBitPos/8] & mask;
