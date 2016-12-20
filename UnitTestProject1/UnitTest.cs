@@ -7,6 +7,10 @@ namespace UnitTestProject1
     [TestClass]
     public class UnitTest1
     {
+
+        [TestMethod]
+        public void
+
         [TestMethod]
         public void TestInstructions()
         {
@@ -19,6 +23,13 @@ namespace UnitTestProject1
 
             Assert.AreEqual(0x10, cpu.V[0]);
             Assert.AreEqual(0x00, cpu.VF);
+        }
+
+        [TestMethod]
+        public void TestSubroutines()
+        {
+            CPU cpu = new CPU();
+
         }
 
         [TestMethod]

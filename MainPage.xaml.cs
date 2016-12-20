@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Chip_8.Chip_8_Emulator;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,9 +23,20 @@ namespace Chip_8
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        CPU cpu;
         public MainPage()
         {
             this.InitializeComponent();
+            cpu = new CPU();
+            cpu.Load(new byte[] {
+            0xD0, 0x05,
+            });
+            cpu.Start();
+
+            //cpu._g_mem[1, 0] = 0x1;
+
+            var screen = cpu.ToString();
+            System.Diagnostics.Debug.Write(screen);
         }
     }
 }
