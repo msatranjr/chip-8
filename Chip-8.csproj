@@ -89,6 +89,29 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- A reference to the entire .Net Framework and Windows SDK are automatically included -->
+    <Content Include="Assets\15PUZZLE" />
+    <Content Include="Assets\BLINKY" />
+    <Content Include="Assets\BLITZ" />
+    <Content Include="Assets\BRIX" />
+    <Content Include="Assets\CONNECT4" />
+    <Content Include="Assets\GUESS" />
+    <Content Include="Assets\HIDDEN" />
+    <Content Include="Assets\INVADERS" />
+    <Content Include="Assets\KALEID" />
+    <Content Include="Assets\MAZE" />
+    <Content Include="Assets\MERLIN" />
+    <Content Include="Assets\MISSILE" />
+    <Content Include="Assets\PONG" />
+    <Content Include="Assets\PONG2" />
+    <Content Include="Assets\PUZZLE" />
+    <Content Include="Assets\SYZYGY" />
+    <Content Include="Assets\TANK" />
+    <Content Include="Assets\TETRIS" />
+    <Content Include="Assets\TICTAC" />
+    <Content Include="Assets\UFO" />
+    <Content Include="Assets\VBRIX" />
+    <Content Include="Assets\VERS" />
+    <Content Include="Assets\WIPEOFF" />
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>

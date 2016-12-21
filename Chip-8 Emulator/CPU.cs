@@ -1,13 +1,33 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Chip_8.Chip_8_Emulator
 {
+    public class Pixel
+    {
+        public int x { get; set; }
+        public int y { get; set; }
+        public bool on { get; set; }
+    }
+
+    public class SetPixelsEventArgs : EventArgs
+    {
+        public List<Pixel> Pixels { get; set; }
+    }
+
     public class CPU
     {
+        public EventHandler<SetPixelsEventArgs> SetPixels { get; set; }
+
+        public EventHandler ClearPixels { get; set; }
+
+        // The Chip-8 clock speed in milliseconds.
+        private static int _CLOCK_SPEED = (int)Math.Round(1000f / 540f);
+
         // CPU registers.
         public byte[] V = new byte[16];
 
@@ -15,9 +35,11 @@ namespace Chip_8.Chip_8_Emulator
         public byte VF;
 
         // Delay timer.
+        bool DT_isRunning;
         byte DT;
 
         // Sound timer.
+        bool ST_isRunning;
         byte ST;
 
         // Program counter.
@@ -29,7 +51,11 @@ namespace Chip_8.Chip_8_Emulator
         // Instruction register.
         int IR;
 
+        // Memory register
         int I;
+
+        // Keyboard. Bool indicates whether the key is pressed or not.
+        public ConcurrentDictionary<byte, bool> Keyboard { get; set; }
 
         // Stack.
         int[] stack = new int[16];
@@ -38,7 +64,7 @@ namespace Chip_8.Chip_8_Emulator
         byte[] _mem = new byte[4096];
 
         // Graphics memory.
-        public byte[,] _g_mem = new byte[32, 12];
+        public bool[,] _g_mem = new bool[32, 64];
 
         public byte[] _sprites = new byte[]
         {
@@ -127,18 +153,20 @@ namespace Chip_8.Chip_8_Emulator
                 {0x0, () =>
                 {   
                     // 0x00E0 -- Clear the screen.
-                    if ((IR & 0x00F0) == 0x00E0)
+                    if ((IR & 0x00FF) == 0x00E0)
                     {
                         for (int y = 0; y < _g_mem.GetLength(0); y++)
                         {
-                            for (int x = 0; x < _g_mem.GetLength(1); y++)
+                            for (int x = 0; x < _g_mem.GetLength(1); x++)
                             {
-                                _g_mem[y, x] &= 0;
+                                _g_mem[y, x] = false;
                             }
                         }
+
+                        ClearPixels?.Invoke(this, null);
                     }
                     // 0x00EE -- Return from a subroutine.
-                    else if ((IR & 0x00EE) == 0x00EE)
+                    else if ((IR & 0x00FF) == 0x00EE)
                     {
                         PC = stack[SP];
                         SP--;
@@ -320,52 +348,97 @@ namespace Chip_8.Chip_8_Emulator
 
                 // Dxyn - DRW Vx, Vy, nibble Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
                 {0xD, () =>
-                {   
+                {
+                    VF = 0;
+
+                    List<Pixel> pixels = new List<Pixel>();
+
                     for (int i = 0; i < N; i++)
                     {
                         byte b = _mem[I+i];
-                        int yBitPos = (Y + i) % 32;
+                        int yPos = (V[Y] + i) % 32;
 
                         for (int j = 0; j < 8; j++)
                         {
-                            int mask = 0x80 >> j;
-                            int xBitPos = (X + j) % 64;
+                            int bMask = 0x80 >> j;
+                            int xPos = (V[X] + j) % 64;
 
-                            int g_bit = _g_mem[yBitPos, xBitPos/8] & mask;
-                            int b_bit = b & mask;
+                            int b_bit = (b & bMask) << j;
 
-                            if (g_bit == b_bit)
+                            if (b_bit > 0 && _g_mem[yPos, xPos])
                                 VF = 1;
-                            else
-                                VF = 0;
 
-                            _g_mem[yBitPos, xBitPos/8] ^= (byte)b_bit;
+                            _g_mem[yPos, xPos] ^= (b_bit > 0 ? true : false);
+
+                            pixels.Add(new Pixel() {x = xPos, y = yPos, on = _g_mem[yPos, xPos] });
+                        }
+                    }
+
+                    SetPixels?.Invoke(this, new SetPixelsEventArgs() { Pixels = pixels });
+                }},
+
+                
+                {
+
+                // 0xE*** opcodes.
+                0xE, () =>
+                {
+                    // Ex9E - SKP Vx -- Skip next instruction if key with the value of Vx is pressed.
+                    if (NN == 0x9E)
+                    {
+                        if (Keyboard[V[X]])
+                        {
+                            PC += 2;
+                        }
+                    }
+                    // ExA1 - SKNP Vx -- Skip next instruction if key with the value of Vx is not pressed.
+                    else if (NN == 0xA1)
+                    {
+                        if (!Keyboard[V[X]])
+                        {
+                            PC += 2;
                         }
                     }
                 }},
 
-                {0xE, () =>
-                {
-                    
-                }},
-
+                // 0xF*** opcodes.
                 {0xF, () =>
                 {
                    int c = IR & 0x00FF;
 
                    switch (c)
                     {
+                        // Fx07 - LD Vx, DT -- Set Vx = delay timer value.
                         case 0x07:
+                            V[X] = DT;
                             break;
+                        // Fx0A - LD Vx, K -- Wait for a key press, store the value of the key in Vx.
                         case 0x0A:
+                            var pressedKeys = Keyboard.Where(k => k.Value);
+
+                            while (pressedKeys.Count() <= 0)
+                            {
+                                // Poll until a key is pressed.
+                                Task.Delay(_CLOCK_SPEED);
+                            }
+
+                            V[X] = pressedKeys.FirstOrDefault().Key;
                             break;
+                        // Fx15 - LD DT, Vx -- Set delay timer = Vx.
                         case 0x15:
+                            DT = V[X];
                             break;
+                        // Fx18 - LD ST, Vx -- Set sound timer = Vx.
                         case 0x18:
+                            ST = V[X];
                             break;
+                        // Fx1E - ADD I, Vx -- Set I = I + Vx.
                         case 0x1E:
+                            I = I + V[X];
                             break;
+                        // Fx29 - LD F, Vx -- Set I = location of sprite for digit Vx.
                         case 0x29:
+                            I = V[X] * 5;
                             break;
                         // Fx33 - LD B, Vx. Stores the BCD representation of V[X] in memory locations I, I+1, I+2
                         case 0x33:
@@ -377,12 +450,14 @@ namespace Chip_8.Chip_8_Emulator
                             _mem[I+1] = (byte)tens;
                             _mem[I+2] = (byte)ones;
                             break;
+                        // Fx55 - LD [I], Vx -- Store registers V0 through Vx in memory starting at location I.
                         case 0x55:
                             for (int i = 0; i <= X; i++)
                             {
                                 _mem[I+i] = V[i];
                             }
                             break;
+                        // Fx65 - LD Vx, [I] -- Read registers V0 through Vx from memory starting at location I.
                         case 0x65:
                             for (int i = 0; i <= X; i++)
                             {
@@ -404,14 +479,18 @@ namespace Chip_8.Chip_8_Emulator
 
         public void Start()
         {
-            // Initialize everything.
+            // Initialize keyboard.
+            Keyboard = new ConcurrentDictionary<byte, bool>();
+            for (byte i = 0x0; i < 0xF; i++)
+            {
+                Keyboard.GetOrAdd(i, false);
+            }
 
             // Load sprites into memory.
             for (int i = 0; i < _sprites.Length; i++)
                 _mem[i] = _sprites[i];
 
-            // Load ROM into memory
-
+            // Set PC to the first instruction.
             PC = 0x200;
 
             do
@@ -428,9 +507,39 @@ namespace Chip_8.Chip_8_Emulator
                 // Decode and execute.
                 Decoder[(IR & 0xF000) >> 12]();
 
-                // Delay CPU to emulate true speed.
-                Task.Delay(500);
-            } while (IR != 0x0);
+                // Start timers if they need to.
+                if (DT > 0 && !DT_isRunning)
+                {
+                    DT_isRunning = true;
+                    Task.Run(() =>
+                    {
+                        while(DT > 0)
+                        {
+                            DT--;
+                            Task.Delay(17);
+                        }
+                        DT_isRunning = false;
+                    });
+                }
+
+                if (ST > 0 && !ST_isRunning)
+                {
+                    ST_isRunning = true;
+                    Task.Run(() =>
+                        {
+                            while (ST > 0)
+                            {
+                                ST--;
+                                // Generate beep right here.
+                                Task.Delay(17);
+                            }
+                            ST_isRunning = false;
+                        });
+                }
+
+                System.Diagnostics.Debug.WriteLine("Executed {0:X}", IR);
+                Task.Delay(_CLOCK_SPEED);
+            } while (IR != 0x00);
         }
 
         public override string ToString()
@@ -439,14 +548,9 @@ namespace Chip_8.Chip_8_Emulator
 
             for (int i = 0; i < 32; i++)
             {
-                for (int j = 0; j < 12; j++)
+                for (int j = 0; j < 64; j++)
                 {
-                    for (int k = 0; k < 8; k++)
-                    {
-                        int mask = 0x80 >> (7 - k);
-
-                        screen += (_g_mem[i, j] & mask) == mask ? "1" : "0";
-                    }
+                    screen += _g_mem[i, j] ? "*" : " ";
                 }
 
                 screen += "\n";
