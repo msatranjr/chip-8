@@ -1,4 +1,5 @@
 ﻿using Chip_8.Chip_8_Emulator;
+using Microsoft.Graphics.Canvas.UI.Xaml;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -73,26 +74,60 @@ namespace Chip_8
 
             cpu = new CPU();
 
-            cpu.ClearPixels += async (s, e) =>
+            //cpu.ClearPixels += async (s, e) =>
+            //{
+            //    await CallOnUiThreadAsync(() =>
+            //    {
+            //        Screen.Children.Clear();
+            //    });
+            //};
+
+            cpu.DrawScreen += async (s, e) =>
             {
                 await CallOnUiThreadAsync(() =>
                 {
-                    Screen.Children.Clear();
+                    Screen.Invalidate();
+                    //foreach (Pixel p in e.Pixels)
+                    //{
+                    //    DrawScreen(p.x, p.y, p.on);
+                    //}
+                    //Screen.Children.Clear();
+
+                    //for (int i = 0; i < cpu._g_mem.GetLength(0); i++)
+                    //{
+                    //    for (int j = 0; j < cpu._g_mem.GetLength(1); j++)
+                    //    {
+                    //        if (cpu._g_mem[i,j])
+                    //        {
+                    //            var rect = new Rectangle();
+                    //            rect.Fill = new SolidColorBrush(Windows.UI.Colors.White);
+                    //            rect.Width = 10;
+                    //            rect.Height = 10;
+                    //            Screen.Children.Add(rect);
+                    //            Canvas.SetLeft(rect, j * 10);
+                    //            Canvas.SetTop(rect, i * 10);
+                    //        }
+                    //            //DrawScreen(j, i, cpu._g_mem[i, j]);
+                    //    }
+                    //}
                 });
             };
 
-            cpu.SetPixels += async (s, e) =>
+        }
+
+        void canvasControl_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+        {
+            for (int i = 0; i < cpu._g_mem.GetLength(0); i++)
             {
-                await CallOnUiThreadAsync(() =>
+                for (int j = 0; j < cpu._g_mem.GetLength(1); j++)
                 {
-                    foreach (Pixel p in e.Pixels)
+                    if (cpu._g_mem[i, j])
                     {
-                        DrawScreen(p.x, p.y, p.on);
+                        var rect = new Rect(j * 10, i * 10, 10, 10);
+                        args.DrawingSession.FillRectangle(rect, Windows.UI.Colors.White);
                     }
-                    
-                });
-            };
-
+                }
+            }
         }
 
         private async void LoadRom()
@@ -113,25 +148,25 @@ namespace Chip_8
             await Task.Run(() => cpu.Start());
         }
 
-        private void DrawScreen(int x, int y, bool isOn)
-        {
-            if (isOn)
-            {
-                var rect = new Rectangle();
-                rect.Fill = new SolidColorBrush(Windows.UI.Colors.White);
-                rect.Width = 10;
-                rect.Height = 10;
-                Screen.Children.Add(rect);
-                Canvas.SetLeft(rect, x * 10);
-                Canvas.SetTop(rect, y * 10);
-                Pixels[y, x] = rect;
-            }
-            else
-            {
-                Screen.Children.Remove(Pixels[y, x]);
-            }
+        //private void DrawScreen(int x, int y, bool isOn)
+        //{
+        //    if (isOn)
+        //    {
+        //        var rect = new Rectangle();
+        //        rect.Fill = new SolidColorBrush(Windows.UI.Colors.White);
+        //        rect.Width = 10;
+        //        rect.Height = 10;
+        //        Screen.Children.Add(rect);
+        //        Canvas.SetLeft(rect, x * 10);
+        //        Canvas.SetTop(rect, y * 10);
+        //        Pixels[y, x] = rect;
+        //    }
+        //    else
+        //    {
+        //        Screen.Children.Remove(Pixels[y, x]);
+        //    }
 
-        }
+        //}
 
         private int GetKeyValue(object sender)
         {

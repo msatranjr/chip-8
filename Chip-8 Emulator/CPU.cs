@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,9 +22,9 @@ namespace Chip_8.Chip_8_Emulator
 
     public class CPU
     {
-        public EventHandler<SetPixelsEventArgs> SetPixels { get; set; }
+        public EventHandler<SetPixelsEventArgs> DrawScreen { get; set; }
 
-        public EventHandler ClearPixels { get; set; }
+        //public EventHandler ClearPixels { get; set; }
 
         // The Chip-8 clock speed in milliseconds.
         private static int _CLOCK_SPEED = (int)Math.Round(1000f / 540f);
@@ -32,7 +33,7 @@ namespace Chip_8.Chip_8_Emulator
         public byte[] V = new byte[16];
 
         // Special flag register.
-        public byte VF;
+        //public bool VF;
 
         // Delay timer.
         bool DT_isRunning;
@@ -65,6 +66,26 @@ namespace Chip_8.Chip_8_Emulator
 
         // Graphics memory.
         public bool[,] _g_mem = new bool[32, 64];
+
+        // For debugging only.
+        public void printGraphicsMemory()
+        {
+            for (int i = 0; i < _g_mem.GetLength(0); i++)
+            {
+                for (int j = 0; j < _g_mem.GetLength(1); j++)
+                {
+                    if (_g_mem[i,j])
+                    {
+                        Debug.Write("X");
+                    }
+                    else
+                    {
+                        Debug.Write(" ");
+                    }
+                }
+                Debug.WriteLine("");
+            }
+        }
 
         public byte[] _sprites = new byte[]
         {
@@ -163,7 +184,7 @@ namespace Chip_8.Chip_8_Emulator
                             }
                         }
 
-                        ClearPixels?.Invoke(this, null);
+                        DrawScreen(this, null);
                     }
                     // 0x00EE -- Return from a subroutine.
                     else if ((IR & 0x00FF) == 0x00EE)
@@ -260,22 +281,22 @@ namespace Chip_8.Chip_8_Emulator
 
                             if (value > 0xFF)
                             {
-                                VF = 0x01;
+                                V[0xF] = 1;
                             }
                             else
                             {
-                                VF = 0x00;
+                                V[0xF] = 0;
                             }
                             break;
                             // 0x8xy5 -- Set Vx = Vx - Vy, set VF to NOT borrow.
                             case 5:
                             if (V[X] > V[Y])
                             {
-                                VF = 1;
+                                V[0xF] = 1;
                             }
                             else
                             {
-                                VF = 0;
+                                V[0xF] = 0;
                             }
 
                             V[X] -= V[Y];
@@ -284,11 +305,11 @@ namespace Chip_8.Chip_8_Emulator
                             case 6:
                             if ((V[X] & 0x01) > 0)
                             {
-                                VF = 1;
+                                V[0xF] = 1;
                             }
                             else
                             {
-                                VF = 0;
+                                V[0xF] = 0;
                             }
 
                             V[X] >>= 1;
@@ -297,11 +318,11 @@ namespace Chip_8.Chip_8_Emulator
                             case 7:
                             if (V[Y] > V[X])
                             {
-                                VF = 1;
+                                V[0xF] = 1;
                             }
                             else
                             {
-                                VF = 0;
+                                V[0xF] = 0;
                             }
 
                             V[X] = (byte)(V[Y] - V[X]);
@@ -310,11 +331,11 @@ namespace Chip_8.Chip_8_Emulator
                             case 0xE:
                             if ((0x80 & V[X]) == 0x80)
                             {
-                                VF = 1;
+                                V[0xF] = 1;
                             }
                             else
                             {
-                                VF = 0;
+                                V[0xF] = 0;
                             }
                             V[X] <<= 1;
                             break;
@@ -349,9 +370,7 @@ namespace Chip_8.Chip_8_Emulator
                 // Dxyn - DRW Vx, Vy, nibble Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
                 {0xD, () =>
                 {
-                    VF = 0;
-
-                    List<Pixel> pixels = new List<Pixel>();
+                    V[0xF] = 0;
 
                     for (int i = 0; i < N; i++)
                     {
@@ -365,16 +384,14 @@ namespace Chip_8.Chip_8_Emulator
 
                             int b_bit = (b & bMask) << j;
 
-                            if (b_bit > 0 && _g_mem[yPos, xPos])
-                                VF = 1;
+                            if (_g_mem[yPos, xPos] && b_bit > 0)
+                                V[0xF] = 1;
 
                             _g_mem[yPos, xPos] ^= (b_bit > 0 ? true : false);
-
-                            pixels.Add(new Pixel() {x = xPos, y = yPos, on = _g_mem[yPos, xPos] });
                         }
                     }
 
-                    SetPixels?.Invoke(this, new SetPixelsEventArgs() { Pixels = pixels });
+                    DrawScreen?.Invoke(this, null);
                 }},
 
                 
